@@ -1,8 +1,17 @@
 name: assignment-test
-on: [push]
+on:
+    push:
+        tags-ignore:
+            - '*'
+        branches:
+            - '*'
 jobs:
     unit-test:
+<<<<<<< HEAD
+        container: cuaesd/aesd-autotest:24-unit-test
+=======
         container: cuaesd/aesd-autotest:assignment6
+>>>>>>> 0c84502 (Changes for assignment 6)
         runs-on: self-hosted
         steps:
           - uses: actions/checkout@v2

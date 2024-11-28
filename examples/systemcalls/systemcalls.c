@@ -1,5 +1,10 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
 
+#define NO_ERROR 0
 /**
  * @param cmd the command to execute with system()
  * @return true if the command in @param cmd was executed
@@ -11,11 +16,24 @@ bool do_system(const char *cmd)
 {
 
 /*
- * TODO  add your code here
  *  Call the system() function with the command set in the cmd
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+
+    int8_t system_return=system(cmd);
+
+    if(NO_ERROR!=system_return)
+    {
+        return false;
+    }
+
+    if ((WEXITSTATUS(system_return) == 0) && WIFEXITED(system_return) )
+    {
+        printf("\nsystem() terminated gracefully\n");
+        return true;
+    }
+
 
     return true;
 }
@@ -40,6 +58,7 @@ bool do_exec(int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    bool returnVlaue = false;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -50,7 +69,6 @@ bool do_exec(int count, ...)
     command[count] = command[count];
 
 /*
- * TODO:
  *   Execute a system command by calling fork, execv(),
  *   and wait instead of system (see LSP page 161).
  *   Use the command[0] as the full path to the command to execute
@@ -59,9 +77,40 @@ bool do_exec(int count, ...)
  *
 */
 
+    pid_t pid = fork();
+
+    // execv()
+    if(pid < 0)
+    {
+        returnVlaue = false;
+    }
+    else if(pid == 0)
+    {
+        // Child process
+        execv(command[0], command);
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        // Parent process
+        int status;
+        wait(&status);
+
+        if(WIFEXITED(status) && (EXIT_FAILURE!=WEXITSTATUS(status)))
+        {
+                // Child terminated normally.
+                returnVlaue = true;
+        }
+        else
+        {
+            // Child terminated abnormally.
+            returnVlaue = false;
+        }
+    }
+
     va_end(args);
 
-    return true;
+    return returnVlaue;
 }
 
 /**
@@ -86,14 +135,56 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
 
 /*
- * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
  *   redirect standard out to a file specified by outputfile.
  *   The rest of the behaviour is same as do_exec()
  *
 */
 
+ int status;
+
+
+    pid_t pid;
+
+
+    int fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC , 0644);
+
+    if(fd == -1){
+
+        exit(EXIT_FAILURE);
+    }
+    
+    pid=fork();
+
+    if(pid == -1){
+        return false;
+    }
+
+   
+     /*child Process*/
+    if(pid == 0){
+    
+    if(dup2(fd,STDOUT_FILENO) == -1){
+        close(fd);
+        exit(EXIT_FAILURE);
+    }
+
+        close(fd);
+        execv(command[0],command);
+        _exit(EXIT_FAILURE);
+    }
+
+    else if(pid > 0){
+        // int status;
+
+        if (waitpid(pid,&status,0) == -1){
+            return false;
+        }
+
+    }
+
+
     va_end(args);
 
-    return true;
+    return WIFEXITED(status) && (WEXITSTATUS(status) == 0) ;
 }

@@ -152,7 +152,10 @@ int main(int argc, char* argv[])
       // Your implementation should use a newline to separate data packets received.  
       // In other words a packet is considered complete when a newline character is found in the input receive stream, 
       // and each newline should result in an append to the /var/tmp/aesdsocketdata file.
-      if(strchr(read_buffer, '\n') != NULL) break;
+      if(strchr(read_buffer, '\n') != NULL) 
+      {
+      	break;
+      }
     }
 
     

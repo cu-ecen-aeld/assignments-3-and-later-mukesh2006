@@ -1,6 +1,6 @@
 #include "aesdsocket.h"
 
-// signal handler function declearation 
+// signal handler function declaration 
 void signal_handler(int);
 
 // global variables 

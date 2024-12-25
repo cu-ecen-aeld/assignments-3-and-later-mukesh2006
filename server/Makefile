@@ -3,6 +3,8 @@
 #CROSS_COMPILE=aarch64-none-linux-gnu-
 CC=$(CROSS_COMPILE)gcc
 CFLAGS=-Werror -Wall -g -v
+LDFLAGS=-pthread -lstdc++
+
 SOURCES=aesdsocket.c
 TARGET=aesdsocket
 OBJS=aesdsocket.o
@@ -15,7 +17,7 @@ all: $(TARGET)
 default: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -o $(TARGET) $(OBJS) 
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -o $(TARGET) $(LDFLAGS) $(OBJS) 
 
 clean:
 	rm -f $(OBJS) $(TARGET) *.map  *.elf

@@ -43,8 +43,10 @@ typedef struct connectionHandler_t {
     SLIST_ENTRY(connectionHandler_t)  connectionHandler_next;
 } connectionHandler_t;
 
+
 /** Function Prototype */
 void* connection_handler_thread_fxn(void* parameter);
-int recvall(int s, char **strbuf);
-int sendall(int s, char *buf, int *len);
+void print_time_thread_fxn(union sigval sv);
+void setup_print_time_thread(int seconds);
+
 

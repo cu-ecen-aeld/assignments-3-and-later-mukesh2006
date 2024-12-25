@@ -2,8 +2,8 @@
 
 #CROSS_COMPILE=aarch64-none-linux-gnu-
 CC=$(CROSS_COMPILE)gcc
-CFLAGS=-Werror -Wall -g -v
-LDFLAGS=-pthread -lstdc++
+CFLAGS=-Werror -Wall -g -v 
+LDFLAGS=-pthread -lstdc++ -lrt
 
 SOURCES=aesdsocket.c
 TARGET=aesdsocket

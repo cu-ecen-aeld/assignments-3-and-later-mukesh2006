@@ -63,11 +63,6 @@ int main(int argc, char* argv[])
       syslog(LOG_DEBUG, "Error in function getaddrinfo\n");
       return ERROR;
   }
-  else
-  {
-  	  syslog(LOG_DEBUG, "success in function getaddrinfo\n");
-      printf("success in function getaddrinfo\n");
-  }
   
   //b. Opens a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
   // socket 
@@ -78,23 +73,13 @@ int main(int argc, char* argv[])
       printf("Error in function socket\n");
       return ERROR;
   }
-  else
-  {
-      syslog(LOG_DEBUG, "success in function socket\n");
-      printf("success in function socket\n");
-   }
-  
+
   if (ERROR == setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval))) 
   {
       syslog(LOG_PERROR, "error in function setsockopt\n");
       printf("error in function setsockopt\n");
       return ERROR;
   }
-  else
-  {
-      syslog(LOG_DEBUG, "succss in function setsockopt\n");
-      printf("succss in function setsockopt\n");
-   } 
 
   if(ERROR == bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen))
   { 
@@ -103,12 +88,7 @@ int main(int argc, char* argv[])
       close(server_fd);
       return ERROR;
   }
-  else
-  {
-      syslog(LOG_DEBUG, "success in function bind\n");
-      printf("success in function bind\n");
-  } 
-  
+
   // free the memory 
   freeaddrinfo(servinfo);
    
@@ -138,6 +118,7 @@ int main(int argc, char* argv[])
   setup_print_time_thread(10);  
 
   // h. Restarts accepting connections from new clients forever in a loop until SIGINT or SIGTERM is received
+  syslog(LOG_DEBUG,"Entering While (true)\n");
   printf("Entering While (true)\n");
     
   while(true)
@@ -162,11 +143,6 @@ int main(int argc, char* argv[])
         printf("error in function aceept\n");
         return ERROR;
     }
-    else
-    {
-        syslog(LOG_DEBUG, "success in function accept\n");
-        printf("success in function accept\n");
-    } 
 
     // initalize the thread variables 
     conn_hand_ptr->write_sync_mutex    = &write_sync_mutex;
@@ -208,11 +184,13 @@ int main(int argc, char* argv[])
           printf("Failure in pthread_join\n");
         }
 
-        SLIST_REMOVE(&head, conn_hand_ptr, connectionHandler_t, connectionHandler_next);   // Deletion. 
+        SLIST_REMOVE(&head, conn_hand_ptr, connectionHandler_t, connectionHandler_next);   // Deletion of the node
         free(conn_hand_ptr);
       }
     }
   }
+
+  // cleanup 
   close(received_data_file_fd);
   timer_delete(timerId);
 
@@ -331,13 +309,14 @@ void setup_print_time_thread(int seconds)
   timerSpec.it_value.tv_sec     = seconds;
   timerSpec.it_value.tv_nsec    = 0;
 
+  // create the timer
   if(NO_ERROR!= timer_create(CLOCK_MONOTONIC, &timerEvent, &timerId))
   {
     syslog(LOG_DEBUG, "setup_print_time_thread: Failure in timer_create\n");
     printf("setup_print_time_thread: Failure in timer_create\n"); 
   }
-
-
+  
+  // set the time interval for the timer
   if(NO_ERROR!= timer_settime(timerId, TIMER_ABSTIME, &timerSpec, NULL))
   {
     syslog(LOG_DEBUG, "setup_print_time_thread: Failure in timer_create\n");

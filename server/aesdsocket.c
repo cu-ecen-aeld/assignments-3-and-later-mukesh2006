@@ -8,17 +8,22 @@ int client_fd;
 int server_fd;
 int received_data_file_fd; 
 
+  // Assignemnt 6 part 1
+  connectionHandler_t *conn_hand_ptr;
+  connectionHandler_t *conn_hand_ptr_temp;
+SLIST_HEAD(head_t, connectionHandler_t) head; // Singly-linked List head.  
+
+// a. Append a timestamp in the form “timestamp:time” where time is specified by the RFC 2822 compliant strftime format, followed by newline.  This string should be appended to the /var/tmp/aesdsocketdata file every 10 seconds, where the string includes the year, month, day, hour (in 24 hour format) minute and second representing the system wall clock time
+time_t last_timestamp;
+
 // main function 
 int main(int argc, char* argv[])
 {
-
   // registr for signal
   signal(SIGTERM, signal_handler);
   signal(SIGINT, signal_handler);
 
   // initialize required variables for the program
-  int bind_return=NO_ERROR;
-  int listen_return=NO_ERROR;
   int optval=1;
   struct addrinfo *servinfo=NULL;
   //struct addrinfo *iterator=NULL;
@@ -35,9 +40,17 @@ int main(int argc, char* argv[])
   socklen_t addr_size;
   char client_ip_address[INET6_ADDRSTRLEN];
   memset(client_ip_address, 0, sizeof (client_ip_address));
-  int number_of_bytes_sent = 0;
-  int number_of_bytes_read = 0;
-  char read_buffer[RECEIVE_PACKET_SIZE];
+
+
+  SLIST_INIT(&head);                /* Initialize the list. */
+  pthread_t       conn_handler_thread;
+  pthread_mutex_t write_sync_mutex;
+  if(0!=pthread_mutex_init(&write_sync_mutex, NULL))
+  {
+      printf("Error in function pthread_mutex_init\n");
+      syslog(LOG_DEBUG, "Error in function pthread_mutex_init\n");
+      return ERROR;    
+  }
 
  // getaddrinfo 
   if(0 != getaddrinfo(NULL, PORT, &hints, &servinfo)) 
@@ -79,8 +92,7 @@ int main(int argc, char* argv[])
       printf("succss in function setsockopt\n");
    } 
 
-  bind_return = bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen);
-  if(ERROR == bind_return)
+  if(ERROR == bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen))
   { 
       syslog(LOG_PERROR, "error in function bind\n");
       printf("error in function bind\n");
@@ -97,9 +109,8 @@ int main(int argc, char* argv[])
   freeaddrinfo(servinfo);
    
   // c. Listens for and accepts a connection 
-  // listen to the address  
-  listen_return = listen(server_fd, LISTEN_BACKLOG);
-  if(ERROR == listen_return)
+  // listen to the address
+  if(ERROR == listen(server_fd, LISTEN_BACKLOG))
   {  
       syslog(LOG_PERROR, "error in function listen\n");
       printf("error in function listen\n");
@@ -113,16 +124,37 @@ int main(int argc, char* argv[])
   {
   	syslog(LOG_DEBUG, "Starting the application aesdsocket as a daemon\n");
     printf("Starting the application aesdsocket as a daemon\n");
-
     daemon(0, 0);
   }
 
   // h. Restarts accepting connections from new clients forever in a loop until SIGINT or SIGTERM is received
   printf("Entering While (true)\n");
+  last_timestamp=time(NULL);
+  //open the file to write the input from different clients
+  received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
   while(true)
-  {  
+  {
+    //    a. Append a timestamp in the form “timestamp:time” where time is specified by the RFC 2822 compliant strftime format, followed by newline.  This string should be appended to the /var/tmp/aesdsocketdata file every 10 seconds, where the string includes the year, month, day, hour (in 24 hour format) minute and second representing the system wall clock time.
+    if((time(NULL) - last_timestamp) > 10)
+    {
+      char timestamp[64];
+      memset(timestamp,0,64);
+      time_t now = time(NULL);
+      struct tm *local_now = localtime(&now);
+      strftime(timestamp, sizeof(timestamp), "timestamp:%a, %d %b %Y %T %z\n", local_now);
+      syslog(LOG_INFO, "Writing %s to tmpfile\n", timestamp);
+      printf("Writing %s to tmpfile\n", timestamp);
+      //acquire the lock , write and release the mutex 
+      if (NO_ERROR == pthread_mutex_lock(&write_sync_mutex))
+      {
+        last_timestamp=time(NULL); //update the last timestamp 
+        write(received_data_file_fd, timestamp, strlen(timestamp)); 
+        pthread_mutex_unlock(&write_sync_mutex);
+      }
+    }
+
     addr_size = sizeof(client_addr);
-	// c. Listens for and accepts a connection  
+	  // c. Listens for and accepts a connection  
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addr_size);
     
     // error in client request acceptance
@@ -138,13 +170,67 @@ int main(int argc, char* argv[])
         printf("success in function accept\n");
     } 
     
+
+    /* Assignment 6 part 1: Implementing the threading */
+    // 1. Modify your socket based program to accept multiple simultaneous connections, with each connection spawning a new thread to handle the connection.
+    conn_hand_ptr = (connectionHandler_t *)malloc(sizeof(connectionHandler_t));
+    if (NULL == conn_hand_ptr)
+    {
+      syslog(LOG_PERROR, "failure in function malloc\n");
+      continue; // still continue, maybe next time the malloc will work 
+    }
+    
+    // initalize the thread variables 
+    conn_hand_ptr->write_sync_mutex    = &write_sync_mutex;
+    conn_hand_ptr->is_thread_complete  = false;
+    conn_hand_ptr->client_fd           = client_fd; // provide the client fd to read/write from for the thread 
+
     // d. Logs message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client. 
     inet_ntop(AF_INET, &(client_addr.sin_addr), client_ip_address, sizeof (client_ip_address));
-    syslog(LOG_DEBUG, "Accepted connection from %s", client_ip_address);
-    printf("Accepted connection from %s", client_ip_address);
+    syslog(LOG_DEBUG, "Accepted connection from %s\n", client_ip_address);
+    printf("Accepted connection from %s\n", client_ip_address);
+    strncpy(conn_hand_ptr->client_address, client_ip_address, INET6_ADDRSTRLEN);
 
+    // create the thread to handle read/write from the client
+    if (NO_ERROR != pthread_create(&conn_handler_thread, NULL, connection_handler_thread_fxn, conn_hand_ptr)) 
+    {
+      syslog(LOG_DEBUG, "Failure in pthread_create\n");
+      printf("Failure in pthread_create\n");
+      close(conn_hand_ptr->client_fd);
+      syslog(LOG_INFO, "Closed connection from %s\n", conn_hand_ptr->client_address);
+      printf("Closed connection from %s\n", conn_hand_ptr->client_address); 
+      free(conn_hand_ptr);
+      conn_hand_ptr = NULL;
+      continue; // Continue the loop in hope that next client can be served 
+    }
+    // store the thread_id in th thread 
+    conn_hand_ptr->thread_id = conn_handler_thread;
+    SLIST_INSERT_HEAD(&head, conn_hand_ptr, connectionHandler_next);
+    conn_hand_ptr = NULL;
+    SLIST_FOREACH_SAFE(conn_hand_ptr, &head, connectionHandler_next, conn_hand_ptr_temp) 
+    {
+    if (conn_hand_ptr->is_thread_complete)
+    {
+      close(conn_hand_ptr->client_fd);
+      syslog(LOG_INFO, "Closed connection from %s\n", conn_hand_ptr->client_address);
+      printf("Closed connection from %s\n", conn_hand_ptr->client_address);
+      // join the thread so that when it finishes it exists gracefully 
+      if(NO_ERROR != pthread_join(conn_hand_ptr->thread_id, NULL))
+      {
+        syslog(LOG_DEBUG, "Failure in pthread_join\n");
+        printf("Failure in pthread_join\n");
+      }
+
+      SLIST_REMOVE(&head, conn_hand_ptr, connectionHandler_t, connectionHandler_next);   // Deletion. 
+      free(conn_hand_ptr);
+    }
+  }
+
+    /* Assignment 6 part 1: Ending threading */
+
+/* The following part moved to the thread 
     // e. Receives data over the connection and appends to file /var/tmp/aesdsocketdata, creating this file if it doesn’t exist.
-    received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);    
+    received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
     memset(read_buffer, 0, RECEIVE_PACKET_SIZE);
     while((number_of_bytes_read = recv(client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     {      
@@ -173,7 +259,10 @@ int main(int argc, char* argv[])
     //g. Logs message to the syslog “Closed connection from XXX” where XXX is the IP address of the connected client.
     syslog(LOG_DEBUG, "Closed connection from %s", client_ip_address);
     printf("Closed connection from %s", client_ip_address);
+    */
   }
+  close(received_data_file_fd);
+//  close(client_fd); //todo: close in the the thread 
   return NO_ERROR;
 }
 
@@ -187,9 +276,73 @@ void signal_handler(int signal_number)
     printf("caught signal exiting\n");
     // Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.
     syslog(LOG_DEBUG, "Caught signal, exiting");  
-    close(server_fd);
-    close(client_fd);
+    shutdown(server_fd, SHUT_RDWR); 
     remove(RECEIVE_DATA_FILE);
-    exit(1);
+
+    SLIST_FOREACH_SAFE(conn_hand_ptr, &head, connectionHandler_next, conn_hand_ptr_temp) 
+    {
+    
+      close(conn_hand_ptr->client_fd);
+      syslog(LOG_INFO, "signal_handler: Closed connection from %s\n", conn_hand_ptr->client_address);
+      printf("signal_handler: Closed connection from %s\n", conn_hand_ptr->client_address);
+      // join the thread so that when it finishes it exists gracefully 
+      if(NO_ERROR != pthread_join(conn_hand_ptr->thread_id, NULL))
+      {
+        syslog(LOG_DEBUG, "signal_handler: Failure in pthread_join\n");
+        printf("signal_handler: Failure in pthread_join\n");
+      }
+
+      SLIST_REMOVE(&head, conn_hand_ptr, connectionHandler_t, connectionHandler_next);   // Deletion. 
+      free(conn_hand_ptr);
+    }
   }
+  exit(1);
+}
+
+void* connection_handler_thread_fxn(void* thread_parameter)
+{
+  connectionHandler_t *thread_func_args = (connectionHandler_t *)thread_parameter;
+  if((time(NULL) - last_timestamp) > 9)
+  {
+    time_t now = time(NULL);
+    char timestamp[64];
+    memset(timestamp,0,64);
+    struct tm *local_now = localtime(&now);
+    strftime(timestamp, sizeof(timestamp), "timestamp:%a, %d %b %Y %T %z\n", local_now);
+    syslog(LOG_INFO, "Writing %s to tmpfile in connection_handler_thread_fxn\n", timestamp);
+    printf("Writing %s to tmpfile in connection_handler_thread_fxn\n", timestamp);
+    if(NO_ERROR == pthread_mutex_lock(thread_func_args->write_sync_mutex))
+    {
+      last_timestamp=time(NULL); //update the last timestamp 
+      write(received_data_file_fd, timestamp, strlen(timestamp)); 
+      pthread_mutex_unlock(thread_func_args->write_sync_mutex);
+    }
+  }
+  if(NO_ERROR == pthread_mutex_lock(thread_func_args->write_sync_mutex))
+  {
+    char read_buffer[RECEIVE_PACKET_SIZE];
+    memset(read_buffer, 0, RECEIVE_PACKET_SIZE);
+    int number_of_bytes_sent = 0;
+    int number_of_bytes_read = 0;
+    while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
+    {      
+      write(received_data_file_fd, read_buffer, number_of_bytes_read); 
+      // Your implementation should use a newline to separate data packets received.  
+      // In other words a packet is considered complete when a newline character is found in the input receive stream, 
+      // and each newline should result in an append to the /var/tmp/aesdsocketdata file.
+      if(strchr(read_buffer, '\n') != NULL) 
+      {
+        break;
+      }
+    }
+    // f. Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
+    lseek(received_data_file_fd, 0, SEEK_SET);
+    while((number_of_bytes_sent = read(received_data_file_fd, read_buffer, RECEIVE_PACKET_SIZE)) > 0)
+    {
+      send(client_fd, read_buffer, number_of_bytes_sent, 0); 
+    }
+    thread_func_args->is_thread_complete = true;
+    pthread_mutex_unlock(thread_func_args->write_sync_mutex);
+  }
+  return thread_parameter;
 }

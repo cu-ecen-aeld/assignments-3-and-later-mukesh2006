@@ -1,6 +1,7 @@
 # MUKESH JHA
 
-CROSS_COMPILE=aarch64-none-linux-gnu-
+#CROSS_COMPILE=aarch64-none-linux-gnu-
+CROSS_COMPILE=aarch64-poky-linux-
 CC=$(CROSS_COMPILE)gcc
 CFLAGS=-Werror -Wall -g -v 
 LDFLAGS=-pthread -lstdc++ -lrt 

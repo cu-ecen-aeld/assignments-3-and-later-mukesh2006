@@ -301,8 +301,11 @@ void setup_print_time_thread(int seconds)
   //set the values of the intervals 
   memset(&timerEvent, 0, sizeof(timerEvent));
   timerEvent.sigev_notify = SIGEV_THREAD;
-  timerEvent.sigev_notify_function = print_time_thread_fxn;
-
+  
+  #if USE_AESD_CHAR_DEVICE != 1
+    timerEvent.sigev_notify_function = print_time_thread_fxn;
+  #endif
+  
   memset(&timerSpec, 0, sizeof(timerSpec));
   timerSpec.it_interval.tv_sec  = seconds;
   timerSpec.it_interval.tv_nsec = 0;

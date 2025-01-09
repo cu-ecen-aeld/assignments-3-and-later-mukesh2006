@@ -27,6 +27,17 @@
 #define LISTEN_BACKLOG 30
 #define BUFFER_SIZE 2000
 
+//5. Modify your socket server application developed in assignments 5 and 6 to support and use a build switch USE_AESD_CHAR_DEVICE, set to 1 by default 
+#define USE_AESD_CHAR_DEVICE 1
+
+// USE_AESD_CHAR_DEVICE can be defined in the Makefile to make compilation process more smooth 
+#if USE_AESD_CHAR_DEVICE
+#define RECEIVE_DATA_FILE "/dev/aesdchar"
+#else
+#define RECEIVE_DATA_FILE "/var/tmp/aesdsocketdata"
+#endif
+
+
 // Structure 
 /** Assignment 6 part 1 */
 /**

@@ -19,6 +19,8 @@
 #include <linux/fs.h> // file_operations
 #include "aesdchar.h"
 
+#define ERROR -1
+
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
@@ -32,7 +34,7 @@ int aesd_open(struct inode *inode, struct file *filp)
     PDEBUG("\naesd_open: open");
     struct aesd_dev *tmp_dev;
     tmp_dev = container_of(inode->i_cdev, struct aesd_dev, cdev);
-    PDEBUG("\naesd_open: entry buffer pointer val: %p",tmp_dev->buf_entry);
+    PDEBUG("\naesd_open: entry buffer pointer val: %p",tmp_dev->entry);
     filp->private_data = tmp_dev;
     return 0;
 }
@@ -263,31 +265,15 @@ void aesd_cleanup_module(void)
 
     cdev_del(&aesd_device.cdev);
 
-    /**
-     * TODO: cleanup AESD specific poritions here as necessary
-     */
-    int index =0;
-    struct aesd_buffer_entry *circ_buf_entry = NULL;
-    
-    // PDEBUG("cleanup: buf entry pointer: %p", aesd_device.buf_entry);
-
-    // free the private entry struct
-    kfree(aesd_device.buf_entry);
-    aesd_device.buf_entry = NULL;
-
-    // PDEBUG("cleanup: buf entry pointer after: %p", aesd_device.buf_entry);
+    struct aesd_buffer_entry *entry;
+    uint8_t index = 0;
 
     // free all entries in circular buffer
-    AESD_CIRCULAR_BUFFER_FOREACH(circ_buf_entry, &aesd_device.circ_buf, index){
-
-
-        if(circ_buf_entry->buffptr != NULL){
-
-            // PDEBUG("cleanup loop: freeing circ buf entry");
-            circ_buf_entry->size = 0;
-            kfree(circ_buf_entry->buffptr);
-            circ_buf_entry->buffptr = NULL;
-
+    AESD_CIRCULAR_BUFFER_FOREACH(entry, &aesd_device.buffer, index)
+    {
+        if(entry->buffptr != NULL)
+        {
+	        kfree(entry->buffptr);
         }
 
     }  

@@ -23,7 +23,6 @@
 #define NO_ERROR 0
 #define RECEIVE_PACKET_SIZE 1024
 #define PORT "9000"
-#define RECEIVE_DATA_FILE "/var/tmp/aesdsocketdata"
 #define LISTEN_BACKLOG 30
 #define BUFFER_SIZE 2000
 

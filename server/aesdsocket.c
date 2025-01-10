@@ -49,12 +49,12 @@ int main(int argc, char* argv[])
   SLIST_INIT(&head);                
   
   // initialize the mutex: 
-  if(NO_ERROR!=pthread_mutex_init(&write_sync_mutex, NULL))
-  {
-      printf("Error in function pthread_mutex_init\n");
-      syslog(LOG_DEBUG, "Error in function pthread_mutex_init\n");
-      return ERROR;    
-  }
+    if(NO_ERROR!=pthread_mutex_init(&write_sync_mutex, NULL))
+    {
+        printf("Error in function pthread_mutex_init\n");
+        syslog(LOG_DEBUG, "Error in function pthread_mutex_init\n");
+        return ERROR;    
+    }
 
  // getaddrinfo 
   if(NO_ERROR!=getaddrinfo(NULL, PORT, &hints, &servinfo)) 
@@ -84,7 +84,8 @@ int main(int argc, char* argv[])
   if(ERROR == bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen))
   { 
       syslog(LOG_PERROR, "error in function bind\n");
-      printf("error in function bind\n");
+      printf("error in function bind: serverFd: %d,   servinfo->ai_addrlen: %d\n", server_fd,   servinfo->ai_addrlen);
+      perror("\n ERROR: \n");
       close(server_fd);
       return ERROR;
   }
@@ -112,7 +113,12 @@ int main(int argc, char* argv[])
   }
 
   //open the file to write the input from different clients
-  received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
+  #ifdef USE_AESD_CHAR_DEVICE
+    received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
+  #else
+    received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
+  #endif
+  
 
   // Timer init
   setup_print_time_thread(10);  
@@ -123,6 +129,7 @@ int main(int argc, char* argv[])
     
   while(true)
   {
+    
      /* Assignment 6 part 1: Implementing the threading */
     // 1. Modify your socket based program to accept multiple simultaneous connections, with each connection spawning a new thread to handle the connection.
     conn_hand_ptr = (connectionHandler_t *)malloc(sizeof(connectionHandler_t));
@@ -153,7 +160,7 @@ int main(int argc, char* argv[])
     syslog(LOG_DEBUG, "Accepted connection from %s\n", client_ip_address);
     printf("Accepted connection from %s\n", client_ip_address);
     strncpy(conn_hand_ptr->client_address, client_ip_address, INET6_ADDRSTRLEN);
-
+   
     // create the thread to handle read/write from the client
     if (NO_ERROR != pthread_create(&conn_handler_thread, NULL, connection_handler_thread_fxn, conn_hand_ptr)) 
     {
@@ -211,6 +218,7 @@ void signal_handler(int signal_number)
     remove(RECEIVE_DATA_FILE);
     close(received_data_file_fd);
     timer_delete(timerId);
+    pthread_mutex_destroy(&write_sync_mutex);
 
     SLIST_FOREACH_SAFE(conn_hand_ptr, &head, connectionHandler_next, conn_hand_ptr_temp) 
     {    
@@ -273,22 +281,24 @@ void print_time_thread_fxn(union sigval sv)
   local_now = localtime(&now);
   strftime(timestamp, sizeof(timestamp), format, local_now);
 
-  if(NO_ERROR==pthread_mutex_lock(&write_sync_mutex))
-  {  
-    write(received_data_file_fd, timestamp, strlen(timestamp));
-    if(NO_ERROR!=pthread_mutex_unlock(&write_sync_mutex))
+  #ifndef USE_AESD_CHAR_DEVICE
+    if(NO_ERROR==pthread_mutex_lock(&write_sync_mutex))
+    {  
+      write(received_data_file_fd, timestamp, strlen(timestamp));
+      if(NO_ERROR!=pthread_mutex_unlock(&write_sync_mutex))
+      {
+        syslog(LOG_DEBUG, "print_time_thread_fxn: Failure in pthread_mutex_unlock\n");
+        printf("print_time_thread_fxn: Failure in pthread_mutex_unlock\n"); 
+        exit (1);
+      }
+    }
+    else
     {
-      syslog(LOG_DEBUG, "print_time_thread_fxn: Failure in pthread_mutex_unlock\n");
-      printf("print_time_thread_fxn: Failure in pthread_mutex_unlock\n"); 
+      syslog(LOG_DEBUG, "print_time_thread_fxn: Failure in pthread_mutex_lock\n");
+      printf("print_time_thread_fxn: Failure in pthread_mutex_lock\n"); 
       exit (1);
     }
-  }
-  else
-  {
-    syslog(LOG_DEBUG, "print_time_thread_fxn: Failure in pthread_mutex_lock\n");
-    printf("print_time_thread_fxn: Failure in pthread_mutex_lock\n"); 
-    exit (1);
-  }
+  #endif 
 }
 
 
@@ -302,9 +312,7 @@ void setup_print_time_thread(int seconds)
   memset(&timerEvent, 0, sizeof(timerEvent));
   timerEvent.sigev_notify = SIGEV_THREAD;
   
-  #if USE_AESD_CHAR_DEVICE != 1
-    timerEvent.sigev_notify_function = print_time_thread_fxn;
-  #endif
+  timerEvent.sigev_notify_function = print_time_thread_fxn;
   
   memset(&timerSpec, 0, sizeof(timerSpec));
   timerSpec.it_interval.tv_sec  = seconds;

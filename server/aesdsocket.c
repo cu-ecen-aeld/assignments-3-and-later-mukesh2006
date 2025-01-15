@@ -112,13 +112,6 @@ int main(int argc, char* argv[])
     daemon(0, 0);
   }
 
-  //open the file to write the input from different clients
-  #ifdef USE_AESD_CHAR_DEVICE
-    received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
-  #else
-    received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
-  #endif
-  
 
   // Timer init
   setup_print_time_thread(10);  
@@ -249,7 +242,14 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     int number_of_bytes_sent = 0;
     int number_of_bytes_read = 0;
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
-    {      
+    { 
+        //open the file to write the input from different clients
+      #ifdef USE_AESD_CHAR_DEVICE
+        received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
+      #else
+        received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
+      #endif
+      
       write(received_data_file_fd, read_buffer, number_of_bytes_read); 
       // Your implementation should use a newline to separate data packets received.  
       // In other words a packet is considered complete when a newline character is found in the input receive stream, 

@@ -5,7 +5,7 @@ void signal_handler(int);
 
 // global variables
 int server_fd;
-int received_data_file_fd;
+FILE *received_data_file_fd;
 pthread_mutex_t write_sync_mutex; //Note: making mutex is not always a good idea, it's made it global because it is used for a simple Read-Write Mutex Scenario 
 
 
@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
   }
 
   // cleanup 
-  close(received_data_file_fd);
+  fclose(received_data_file_fd);
   timer_delete(timerId);
 
   return NO_ERROR;
@@ -209,7 +209,7 @@ void signal_handler(int signal_number)
     syslog(LOG_DEBUG, "Caught signal, exiting");  
     shutdown(server_fd, SHUT_RDWR); 
     remove(RECEIVE_DATA_FILE);
-    close(received_data_file_fd);
+    fclose(received_data_file_fd);
     timer_delete(timerId);
     pthread_mutex_destroy(&write_sync_mutex);
 
@@ -241,16 +241,13 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     memset(read_buffer, 0, RECEIVE_PACKET_SIZE);
     int number_of_bytes_sent = 0;
     int number_of_bytes_read = 0;
-            //open the file to write the input from different clients
-    #ifdef USE_AESD_CHAR_DEVICE
-      received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
-    #else
-      received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
-    #endif
+
+    received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
 
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
-      write(received_data_file_fd, read_buffer, number_of_bytes_read); 
+      //write(received_data_file_fd, read_buffer, number_of_bytes_read); 
+      fwrite(read_buffer, sizeof(char), number_of_bytes_read, received_data_file_fd);
       // Your implementation should use a newline to separate data packets received.  
       // In other words a packet is considered complete when a newline character is found in the input receive stream, 
       // and each newline should result in an append to the /var/tmp/aesdsocketdata file.
@@ -260,15 +257,15 @@ void* connection_handler_thread_fxn(void* thread_parameter)
       }
     }
     // f. Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
-    lseek(received_data_file_fd, 0, SEEK_SET);
-    while((number_of_bytes_sent = read(received_data_file_fd, read_buffer, RECEIVE_PACKET_SIZE)) > 0)
+    lseek(fileno(received_data_file_fd), 0, SEEK_SET);
+    while((number_of_bytes_sent = read(fileno(received_data_file_fd), read_buffer, RECEIVE_PACKET_SIZE)) > 0)
     {
       send(thread_func_args->client_fd, read_buffer, number_of_bytes_sent, 0); 
     }
     thread_func_args->is_thread_complete = true;
     pthread_mutex_unlock(thread_func_args->write_sync_mutex);
   }
-  close(received_data_file_fd);
+  fclose(received_data_file_fd);
   return thread_parameter;
 }
 

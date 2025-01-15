@@ -1,8 +1,13 @@
 /*
  * aesd-circular-buffer.h
  *
- *  Created on: March 1st, 2020
- *      Author: Dan Walkes
+ * Created on: March 1st, 2020
+ * Author: Dan Walkes
+ *
+ * Description:
+ * This header file defines the structure and operations of a circular buffer.
+ * It provides the ability to store and retrieve a fixed number of write operations
+ * in a buffer, suitable for scenarios like logging or buffer-based data management.
  */
 
 #ifndef AESD_CIRCULAR_BUFFER_H
@@ -12,88 +17,97 @@
 #include <linux/types.h>
 #include <linux/kernel.h>
 #else
-#include <stddef.h> // size_t
-#include <stdint.h> // uintx_t
+#include <stddef.h>  // size_t
+#include <stdint.h>  // uintx_t
 #include <stdbool.h>
 #include <stdio.h>
 #endif
 
+// Maximum number of write operations supported by the AESD character device
 #define AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED 10
 
-#define AESD_DEBUG 1  //Remove comment on this line to enable debug
+// Enable debug output
+// To enable debugging, define AESD_DEBUG in the build configuration
+#define AESD_DEBUG 1  // Uncomment this line to enable debug output
 
-#undef PDEBUG             /* undef it, just in case */
+// Debugging macro
+#undef PDEBUG  // Undefine in case it's defined elsewhere
 #ifdef AESD_DEBUG
-#  ifdef __KERNEL__
-     /* This one if debugging is on, and kernel space */
-#    define PDEBUG(fmt, args...) printk( KERN_DEBUG "aesdchar: " fmt, ## args)
-#  else
-     /* This one for user space */
-#    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
-#  endif
+    #ifdef __KERNEL__
+        // Kernel space debugging output
+        #define PDEBUG(fmt, args...) printk(KERN_DEBUG "aesdchar: " fmt, ## args)
+    #else
+        // User space debugging output
+        #define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
+    #endif
 #else
-#  define PDEBUG(fmt, args...) /* not debugging: nothing */
+    // No debugging output
+    #define PDEBUG(fmt, args...) /* No-op */
 #endif
 
-struct aesd_buffer_entry
-{
-    /**
-     * A location where the buffer contents in buffptr are stored
-     */
-    const char *buffptr;
-    /**
-     * Number of bytes stored in buffptr
-     */
-    size_t size;
+/**
+ * Structure representing a single buffer entry.
+ * Each entry holds a pointer to the buffer data and its size.
+ */
+struct aesd_buffer_entry {
+    const char *buffptr;  ///< Pointer to the buffer content
+    size_t size;          ///< Size of the buffer content
 };
 
-struct aesd_circular_buffer
-{
-    /**
-     * An array of pointers to memory allocated for the most recent write operations
-     */
-    struct aesd_buffer_entry  entry[AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED];
-    /**
-     * The current location in the entry structure where the next write should
-     * be stored.
-     */
-    uint8_t in_offs;
-    /**
-     * The first location in the entry structure to read from
-     */
-    uint8_t out_offs;
-    /**
-     * set to true when the buffer entry structure is full
-     */
-    bool full;
+/**
+ * Structure representing the AESD circular buffer.
+ * The buffer can hold a fixed number of write operations and maintains
+ * the current read/write positions.
+ */
+struct aesd_circular_buffer {
+    struct aesd_buffer_entry entry[AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED];  ///< Array of buffer entries
+    uint8_t in_offs;  ///< Index for the next write operation
+    uint8_t out_offs; ///< Index for the next read operation
+    bool full;        ///< Flag indicating whether the buffer is full
 };
 
-extern struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
-            size_t char_offset, size_t *entry_offset_byte_rtn );
+/**
+ * Finds the buffer entry and byte offset corresponding to a given file position.
+ * @param buffer The circular buffer
+ * @param char_offset The file offset to search for
+ * @param entry_offset_byte_rtn The byte offset within the found entry
+ * @return A pointer to the buffer entry at the specified position
+ */
+extern struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(
+    struct aesd_circular_buffer *buffer,
+    size_t char_offset,
+    size_t *entry_offset_byte_rtn
+);
 
-extern const char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry);
+/**
+ * Adds a new entry to the circular buffer.
+ * @param buffer The circular buffer
+ * @param add_entry The entry to add
+ * @return A pointer to the newly added entry, or NULL if the buffer is full
+ */
+extern const char *aesd_circular_buffer_add_entry(
+    struct aesd_circular_buffer *buffer,
+    const struct aesd_buffer_entry *add_entry
+);
 
+/**
+ * Initializes the circular buffer.
+ * Resets the read/write positions and marks the buffer as empty.
+ * @param buffer The circular buffer to initialize
+ */
 extern void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer);
 
 /**
- * Create a for loop to iterate over each member of the circular buffer.
- * Useful when you've allocated memory for circular buffer entries and need to free it
- * @param entryptr is a struct aesd_buffer_entry* to set with the current entry
- * @param buffer is the struct aesd_buffer * describing the buffer
- * @param index is a uint8_t stack allocated value used by this macro for an index
- * Example usage:
- * uint8_t index;
- * struct aesd_circular_buffer buffer;
- * struct aesd_buffer_entry *entry;
- * AESD_CIRCULAR_BUFFER_FOREACH(entry,&buffer,index) {
- *      free(entry->buffptr);
- * }
+ * Macro for iterating over the entries of the circular buffer.
+ * This is useful when freeing allocated memory for buffer entries.
+ *
+ * @param entryptr Pointer to a struct aesd_buffer_entry, will be set to the current entry
+ * @param buffer The circular buffer
+ * @param index A uint8_t index used to track the current position in the loop
  */
-#define AESD_CIRCULAR_BUFFER_FOREACH(entryptr,buffer,index) \
-    for(index=0, entryptr=&((buffer)->entry[index]); \
-            index<AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; \
-            index++, entryptr=&((buffer)->entry[index]))
-
-
+#define AESD_CIRCULAR_BUFFER_FOREACH(entryptr, buffer, index) \
+    for (index = 0, entryptr = &(buffer)->entry[index]; \
+         index < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; \
+         index++, entryptr = &(buffer)->entry[index])
 
 #endif /* AESD_CIRCULAR_BUFFER_H */

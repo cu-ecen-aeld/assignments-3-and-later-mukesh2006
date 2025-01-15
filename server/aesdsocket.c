@@ -25,6 +25,8 @@ int main(int argc, char* argv[])
   signal(SIGTERM, signal_handler);
   signal(SIGINT, signal_handler);
 
+  received_data_file_fd=NULL;
+
   // initialize required variables for the program
   int optval=1;
   struct addrinfo *servinfo=NULL;
@@ -242,12 +244,15 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     int number_of_bytes_sent = 0;
     int number_of_bytes_read = 0;
 
-    received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
 
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
+      printf("\nconnection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
+      received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
+
       //write(received_data_file_fd, read_buffer, number_of_bytes_read); 
       fwrite(read_buffer, sizeof(char), number_of_bytes_read, received_data_file_fd);
+      fclose(received_data_file_fd);
       // Your implementation should use a newline to separate data packets received.  
       // In other words a packet is considered complete when a newline character is found in the input receive stream, 
       // and each newline should result in an append to the /var/tmp/aesdsocketdata file.

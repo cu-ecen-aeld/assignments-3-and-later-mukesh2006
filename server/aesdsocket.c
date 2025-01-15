@@ -241,15 +241,15 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     memset(read_buffer, 0, RECEIVE_PACKET_SIZE);
     int number_of_bytes_sent = 0;
     int number_of_bytes_read = 0;
+            //open the file to write the input from different clients
+    #ifdef USE_AESD_CHAR_DEVICE
+      received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
+    #else
+      received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
+    #endif
+
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
-        //open the file to write the input from different clients
-      #ifdef USE_AESD_CHAR_DEVICE
-        received_data_file_fd = open(RECEIVE_DATA_FILE, O_CREAT | O_APPEND | O_RDWR , 0644);
-      #else
-        received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
-      #endif
-      
       write(received_data_file_fd, read_buffer, number_of_bytes_read); 
       // Your implementation should use a newline to separate data packets received.  
       // In other words a packet is considered complete when a newline character is found in the input receive stream, 
@@ -268,6 +268,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     thread_func_args->is_thread_complete = true;
     pthread_mutex_unlock(thread_func_args->write_sync_mutex);
   }
+  close(received_data_file_fd);
   return thread_parameter;
 }
 

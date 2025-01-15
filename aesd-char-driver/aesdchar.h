@@ -29,8 +29,9 @@ struct aesd_dev
 {
     struct aesd_buffer_entry  entry;
     struct aesd_circular_buffer buffer;
+    int readCounter;                    /* End condition for read loop */
     struct mutex mutex; 
-    struct cdev cdev;     /* Char device structure      */
+    struct cdev cdev;                   /* Char device structure      */
 };
 
 

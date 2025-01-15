@@ -21,6 +21,8 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 
+#include "aesdchar.h"
+
 #define ERROR -1
 
 int aesd_major =   0; // use dynamic major
@@ -29,9 +31,11 @@ int aesd_minor =   0;
 MODULE_AUTHOR("Mukesh Jha");
 MODULE_LICENSE("Dual BSD/GPL");
 
-loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) ;
 void aesd_cleanup_module(void);
 int aesd_init_module(void);
+int aesd_open(struct inode *inode, struct file *filp);
+
+loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) ;
 
 struct aesd_dev aesd_device;
 
@@ -51,6 +55,7 @@ int aesd_release(struct inode *inode, struct file *filp)
     filp->private_data = NULL;
     return 0;
 }
+
 
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)

@@ -16,6 +16,7 @@
 
 #include "aesd-circular-buffer.h"
 
+
 /**
  * @param buffer the buffer to search for corresponding offset.  Any necessary locking must be performed by caller.
  * @param char_offset the position to search for in the buffer list, describing the zero referenced
@@ -42,9 +43,9 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 
     traverse_ix = buffer->out_offs;
 
-    #ifdef __DEBUG__
-        fprintf(stderr,"\n LOG 1: aesd_buffer_entry:  buffer full: %d  buffer->in_offs: %d,  buffer->in_offs: %d, finish_pos: %d, \n", buffer->full, buffer->in_offs, buffer->in_offs, finish_pos);
-    #endif
+    
+    PDEBUG("\n LOG 1: aesd_buffer_entry:  buffer full: %d  buffer->in_offs: %d,  buffer->in_offs: %d, finish_pos: %d, \n", buffer->full, buffer->in_offs, buffer->in_offs, finish_pos);
+    
     while (traverse_ix <= finish_pos)
     {
         if (buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size > char_offset)
@@ -93,17 +94,14 @@ const char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer,
 
     // correct the entry for the in_offs 
     buffer->in_offs=((buffer->in_offs+1)< AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED)?buffer->in_offs+1:0;
-    
-    #ifdef __DEBUG__
-        fprintf(stderr,"\n LOG 1: aesd_circular_buffer_add_entry:  buffer->in_offs: %d, buffer->out_offs: %d, buffer->full: %d  \n", buffer->in_offs, buffer->out_offs, buffer->full);
-    #endif
+ 
+    PDEBUG("\n LOG 1: aesd_circular_buffer_add_entry:  buffer->in_offs: %d, buffer->out_offs: %d, buffer->full: %d  \n", buffer->in_offs, buffer->out_offs, buffer->full);
+   
 
     // check if this entry will make the buffer full
     if (true==buffer->full)
     {
-        #ifdef __DEBUG__
-            fprintf(stderr,"\n LOG 2: aesd_circular_buffer_add_entry:  buffer full: %d  \n", buffer->in_offs);
-        #endif        
+        PDEBUG("\n LOG 2: aesd_circular_buffer_add_entry:  buffer full: %d  \n", buffer->in_offs);        
         buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
     else if (buffer->out_offs == buffer->in_offs)
@@ -111,9 +109,7 @@ const char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer,
         // bufferEntry=&buffer[buffer->out_offs]; //todo: free the memory or let the user take care of it
         // buffer->out_offs=(buffer->out_offs+1)%AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
         buffer->full = true;
-        #ifdef __DEBUG__
-            fprintf(stderr,"\n LOG 3: aesd_circular_buffer_add_entry:  buffer full: %d  \n", buffer->full);
-        #endif
+        PDEBUG("\n LOG 3: aesd_circular_buffer_add_entry:  buffer full: %d  \n", buffer->full);
     }
 
     return ret_ptr;

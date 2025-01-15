@@ -18,7 +18,6 @@
 #include <stdio.h>
 #endif
 
-
 #define AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED 10
 
 #define AESD_DEBUG 1  //Remove comment on this line to enable debug

@@ -119,8 +119,8 @@ int main(int argc, char* argv[])
   setup_print_time_thread(10);  
 
   // h. Restarts accepting connections from new clients forever in a loop until SIGINT or SIGTERM is received
-  syslog(LOG_DEBUG,"Entering While (true)\n");
-  printf("Entering While (true)\n");
+  syslog(LOG_DEBUG,"Entering While (true) Now\n");
+  printf("Entering While (true) Now\n");
     
   while(true)
   {
@@ -244,7 +244,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     int number_of_bytes_sent = 0;
     int number_of_bytes_read = 0;
 
-
+    printf("\nconnection_handler_thread_fxn: number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0  \n");
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
       printf("\nconnection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
@@ -262,6 +262,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
       }
     }
     // f. Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
+    received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
     lseek(fileno(received_data_file_fd), 0, SEEK_SET);
     while((number_of_bytes_sent = read(fileno(received_data_file_fd), read_buffer, RECEIVE_PACKET_SIZE)) > 0)
     {

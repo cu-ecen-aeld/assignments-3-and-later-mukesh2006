@@ -29,6 +29,10 @@ int aesd_minor =   0;
 MODULE_AUTHOR("Mukesh Jha");
 MODULE_LICENSE("Dual BSD/GPL");
 
+loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) ;
+void aesd_cleanup_module(void);
+int aesd_init_module(void);
+
 struct aesd_dev aesd_device;
 
 int aesd_open(struct inode *inode, struct file *filp)
@@ -219,6 +223,7 @@ struct file_operations aesd_fops = {
     .write =    aesd_write,
     .open =     aesd_open,
     .release =  aesd_release,
+    .llseek =   aesd_llseek,
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)
@@ -281,6 +286,43 @@ void aesd_cleanup_module(void)
     }  
     mutex_destroy(&aesd_device.mutex);
     unregister_chrdev_region(devno, 1);
+}
+
+loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) {
+ 
+     struct aesd_dev *dev = NULL;
+    loff_t f_offset = 0;
+    uint8_t index = 0;
+    struct aesd_buffer_entry *entry;
+    loff_t total_size = 0;
+
+    if (filp == NULL)
+        return -EINVAL;
+
+
+    dev = filp->private_data;
+    if (dev == NULL)
+        return -EINVAL;
+
+    PDEBUG("Locking mutex");
+    // Lock the mutex 
+    if (mutex_lock_interruptible(&dev->mutex)) {
+        // Failed to acquire mutex
+        PDEBUG("Failed to lock mutex");
+        return -ERESTARTSYS; 
+    }
+    PDEBUG("Mutex locked");
+
+    // Calculating the total size of the circular buffer
+    AESD_CIRCULAR_BUFFER_FOREACH(entry, &dev->buffer, index) {
+        total_size += entry->size;
+    }
+    mutex_unlock(&dev->mutex);
+
+
+    f_offset = fixed_size_llseek(filp, offset, whence, total_size);
+
+    return f_offset;
 }
 
 module_init(aesd_init_module);

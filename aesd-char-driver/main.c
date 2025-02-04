@@ -22,6 +22,7 @@
 #include <linux/uaccess.h>
 
 #include "aesdchar.h"
+#include "aesd_ioctl.h"
 
 #define ERROR -1
 

@@ -300,6 +300,7 @@ long aesd_ioctl(struct file *filp, unsigned int command, unsigned long arg) {
         } else {
             // Adjusting file offset
             ret_val = aesd_adjust_file_offset(filp, aesd_seekto.write_cmd, aesd_seekto.write_cmd_offset);
+             PDEBUG("aesd_ioctl: aesd_adjust_file_offset: return_val: %d ", ret_val);
             if (ret_val != 0)
                 return -EFAULT;
         }

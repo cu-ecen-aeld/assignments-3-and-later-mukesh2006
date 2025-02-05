@@ -262,6 +262,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
         // Parse the received command to extract seek parameters
         int command_count = sscanf(read_buffer, "AESDCHAR_IOCSEEKTO:%d,%d", &aesd_seekto_data.write_cmd,
                                     &aesd_seekto_data.write_cmd_offset);
+        printf("\n connection_handler_thread_fxn AESDCHAR_IOCSEEKTO: aesd_seekto_data.write_cmd : %d  aesd_seekto_data.write_cmd_offset: %d command_count: %d \n", aesd_seekto_data.write_cmd, aesd_seekto_data.write_cmd_offset, command_count);
 
         if (command_count != 2)
         {
@@ -275,6 +276,10 @@ void* connection_handler_thread_fxn(void* thread_parameter)
             {
          
                 syslog(LOG_ERR, "Failed to execute IOCTL command: %s", strerror(errno));
+            }
+            else
+            {
+              printf(" fialed ioctl ");
             }
             fclose(received_data_file_fd);
         }

@@ -12,6 +12,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <errno.h>
 
 // Assignment 6 part 1 
 #include "queue.h"
@@ -32,10 +33,13 @@
 // USE_AESD_CHAR_DEVICE can be defined in the Makefile to make compilation process more smooth 
 #if USE_AESD_CHAR_DEVICE
 #define RECEIVE_DATA_FILE "/dev/aesdchar"
+const char *aesd_ioctl_cmd = "AESDCHAR_IOCSEEKTO:";
 #else
 #define RECEIVE_DATA_FILE "/var/tmp/aesdsocketdata"
 #endif
 
+// Assignment 9
+#include "../aesd-char-driver/aesd_ioctl.h"
 
 // Structure 
 /** Assignment 6 part 1 */

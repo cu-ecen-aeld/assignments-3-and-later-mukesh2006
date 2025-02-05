@@ -237,6 +237,11 @@ void signal_handler(int signal_number)
 void* connection_handler_thread_fxn(void* thread_parameter)
 {
   connectionHandler_t *thread_func_args = (connectionHandler_t *)thread_parameter;
+
+  #if USE_AESD_CHAR_DEVICE
+    int cmd_length = strlen(aesd_ioctl_cmd);
+  #endif
+
   if(NO_ERROR == pthread_mutex_lock(thread_func_args->write_sync_mutex))
   {
     char read_buffer[RECEIVE_PACKET_SIZE];
@@ -247,6 +252,39 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     printf("\nconnection_handler_thread_fxn: number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0  \n");
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
+      
+#if (USE_AESD_CHAR_DEVICE == 1)
+    // Check if the received data matches the AESD IOCTL command
+    if (strncmp(read_buffer, aesd_ioctl_cmd, cmd_length) == 0)
+    {
+        struct aesd_seekto aesd_seekto_data;
+
+        // Parse the received command to extract seek parameters
+        int command_count = sscanf(read_buffer, "AESDCHAR_IOCSEEKTO:%d,%d", &aesd_seekto_data.write_cmd,
+                                    &aesd_seekto_data.write_cmd_offset);
+
+        if (command_count != 2)
+        {
+            syslog(LOG_ERR, "Failed to parse IOCTL command: %s", strerror(errno));
+        }
+        else
+        {
+            // Executing the IOCTL command to seek to the specified position
+            received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
+            if (ioctl(fileno(received_data_file_fd), AESDCHAR_IOCSEEKTO, &aesd_seekto_data) != 0)
+            {
+         
+                syslog(LOG_ERR, "Failed to execute IOCTL command: %s", strerror(errno));
+            }
+            fclose(received_data_file_fd);
+        }
+
+        // After handling the IOCTL command, proceeding to read data
+        goto read;
+    }
+
+#endif
+
       printf("\nconnection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
       received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
 
@@ -264,6 +302,8 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     // f. Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
     received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
     lseek(fileno(received_data_file_fd), 0, SEEK_SET);
+
+read: 
     while((number_of_bytes_sent = read(fileno(received_data_file_fd), read_buffer, RECEIVE_PACKET_SIZE)) > 0)
     {
       send(thread_func_args->client_fd, read_buffer, number_of_bytes_sent, 0); 

@@ -17,6 +17,7 @@
 #include <linux/types.h>
 #include <linux/cdev.h>
 #include <linux/fs.h> // file_operations
+#include <linux/slab.h>
 #include "aesdchar.h"
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -383,7 +384,7 @@ void aesd_cleanup_module(void)
 
 loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) {
  
-     struct aesd_dev *dev = NULL;
+    struct aesd_dev *dev = NULL;
     loff_t f_offset = 0;
     uint8_t index = 0;
     struct aesd_buffer_entry *entry;

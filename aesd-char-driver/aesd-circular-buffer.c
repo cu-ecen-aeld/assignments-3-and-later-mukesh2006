@@ -48,7 +48,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     
     while (traverse_ix <= finish_pos)
     {
-            PDEBUG("\n LOG 2: aesd_circular_buffer_find_entry_offset_for_fpos:  in while traverse_ix: %d finish_pos: %d \n", traverse_ix, finish_pos);
+        PDEBUG("\n LOG 2: aesd_circular_buffer_find_entry_offset_for_fpos:  in while traverse_ix: %d finish_pos: %d \n buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size: %d , char_offset: %d", traverse_ix, finish_pos, buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size, char_offset);
         if (buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size > char_offset)
         {
             /* Char must be in this string entry */
@@ -56,11 +56,14 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
             {
                 *entry_offset_byte_rtn = char_offset;
             }
+
+            PDEBUG("\n LOG 3: entry_offset_byte_rtn: %p char_offset: %p", entry_offset_byte_rtn, char_offset);
              // b. Return the content (or partial content) related to the most recent 10 write commands, in the order they were received, on any read attempt.
             return &buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED];
         }
         else
         {
+            PDEBUG("\n LOG 4: buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size", buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size);
             char_offset -= buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size;
             traverse_ix++;
         }

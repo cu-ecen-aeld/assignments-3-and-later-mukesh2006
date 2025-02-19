@@ -86,6 +86,8 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     }
     PDEBUG("\naesd_read: Mutex locked");
 
+    PDEBUG("\n aesd_circular_buffer_find_entry_offset_for_fpos(&dev->buffer: %p, *f_pos: %d, &entry_offset: %p) ", dev->buffer, *f_pos, &entry_offset);
+
     struct aesd_buffer_entry *temp_entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->buffer, *f_pos, &entry_offset);
     if (temp_entry == NULL)
     {

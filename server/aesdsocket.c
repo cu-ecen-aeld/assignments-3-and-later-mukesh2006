@@ -264,6 +264,8 @@ void* connection_handler_thread_fxn(void* thread_parameter)
                                     &aesd_seekto_data.write_cmd_offset);
         printf("\n connection_handler_thread_fxn AESDCHAR_IOCSEEKTO: aesd_seekto_data.write_cmd : %d  aesd_seekto_data.write_cmd_offset: %d command_count: %d \n", aesd_seekto_data.write_cmd, aesd_seekto_data.write_cmd_offset, command_count);
 
+        syslog(LOG_INFO,"\n connection_handler_thread_fxn AESDCHAR_IOCSEEKTO: aesd_seekto_data.write_cmd : %d  aesd_seekto_data.write_cmd_offset: %d command_count: %d \n", aesd_seekto_data.write_cmd, aesd_seekto_data.write_cmd_offset, command_count);
+
         if (command_count != 2)
         {
             syslog(LOG_ERR, "Failed to parse IOCTL command: %s", strerror(errno));

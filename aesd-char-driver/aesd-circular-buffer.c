@@ -44,10 +44,11 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     traverse_ix = buffer->out_offs;
 
     
-    PDEBUG("\n LOG 1: aesd_buffer_entry:  buffer full: %d  buffer->in_offs: %d,  buffer->in_offs: %d, finish_pos: %d, \n", buffer->full, buffer->in_offs, buffer->in_offs, finish_pos);
+    PDEBUG("\n LOG 1: aesd_circular_buffer_find_entry_offset_for_fpos:  buffer full: %d  buffer->in_offs: %d,  buffer->in_offs: %d, finish_pos: %d, traverse_ix:%d finish_pos: %d\n", buffer->full, buffer->in_offs, buffer->in_offs, finish_pos, traverse_ix, finish_pos);
     
     while (traverse_ix <= finish_pos)
     {
+            PDEBUG("\n LOG 2: aesd_circular_buffer_find_entry_offset_for_fpos:  in while traverse_ix: %d finish_pos: %d \n", traverse_ix, finish_pos);
         if (buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size > char_offset)
         {
             /* Char must be in this string entry */

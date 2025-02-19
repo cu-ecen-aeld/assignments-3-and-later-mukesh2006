@@ -30,6 +30,8 @@
 struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
             size_t char_offset, size_t *entry_offset_byte_rtn )
 {
+    
+    /*
     uint8_t finish_pos, traverse_ix;
     
     if (buffer->in_offs > buffer->out_offs)
@@ -50,7 +52,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
         PDEBUG("\n LOG 2: aesd_circular_buffer_find_entry_offset_for_fpos:  in while traverse_ix: %d finish_pos: %d \n buffer->entry[traverse_ix MOD AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size: %d , char_offset: %d", traverse_ix, finish_pos, buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size, char_offset);
         if (buffer->entry[traverse_ix % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED].size > char_offset)
         {
-            /* Char must be in this string entry */
+            // Char must be in this string entry 
             if (entry_offset_byte_rtn != NULL)
             {
                 *entry_offset_byte_rtn = char_offset;
@@ -68,6 +70,46 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
         }
     }
   
+    return NULL;
+    */
+
+       // If the character offset is 0, return the first entry
+    if (char_offset == 0)
+    {
+        *entry_offset_byte_rtn = 0;
+        return &buffer->entry[buffer->out_offs];
+    }
+
+    // Initialize variables
+    uint8_t search_index = buffer->out_offs;
+    size_t search_offset = 0;
+
+    // Loop through buffer entries
+    while (1)
+    {
+        // Increase search offset by current entry size
+        search_offset += buffer->entry[search_index].size;
+
+        // If search offset exceeds character offset, calculate entry offset byte
+        if (search_offset > char_offset)
+        {
+            // Calculate entry offset byte
+            *entry_offset_byte_rtn = char_offset - (search_offset - buffer->entry[search_index].size);
+            return &buffer->entry[search_index];
+        }
+
+        // Move to the next entry and wrap around if necessary
+        search_index++;
+        search_index %= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+
+        // Break if we reach the in_offs (end of buffer)
+        if (search_index == buffer->in_offs)
+        {
+            break;
+        }
+    }
+
+    // If offset not found, return NULL
     return NULL;
 }
 

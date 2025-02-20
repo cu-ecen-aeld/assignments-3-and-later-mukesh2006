@@ -321,7 +321,7 @@ size_t i=0;
                 totalCnt += aesd_seekto.write_cmd_offset;
 
                 filp->f_pos = totalCnt;
-                PDEBUG("1111111111111111111 aesd_ioctl: aesd_adjust_file_offset: return_val: %d ", ret_val);
+                PDEBUG("1111111111111111111 aesd_ioctl: aesd_adjust_file_offset: filp->f_pos: %d ", filp->f_pos);
         }
 
         break;

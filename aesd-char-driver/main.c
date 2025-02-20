@@ -292,18 +292,35 @@ long aesd_ioctl(struct file *filp, unsigned int command, unsigned long arg) {
 
     switch (command) {
 
-    case AESDCHAR_IOCSEEKTO:
+    case AESDCHAR_IOCSEEKTO:   
+        loff_t totalCnt = 0;
         // Copy parameters from user space
         if (copy_from_user(&aesd_seekto, (const void __user *)arg, sizeof(aesd_seekto)) != 0) {
             // Failed to copy data from user space
             PDEBUG("Data copy failed\n");
             return -EFAULT;
         } else {
-            // Adjusting file offset
+/*            // Adjusting file offset
             ret_val = aesd_adjust_file_offset(filp, aesd_seekto.write_cmd, aesd_seekto.write_cmd_offset);
              PDEBUG("aesd_ioctl: aesd_adjust_file_offset: return_val: %d ", ret_val);
             if (ret_val != 0)
                 return -EFAULT;
+
+*/
+
+size_t i=0;
+
+                while(i < seekto.write_cmd)
+                {
+                    //totalCnt += aesd_device.circBuff.entry[i].size;
+
+                    totalCnt +=aesd_device.entry[i].size;
+                    i++;
+                }
+
+                totalCnt += seekto.write_cmd_offset;
+
+                filp->f_pos = totalCnt;
         }
 
         break;

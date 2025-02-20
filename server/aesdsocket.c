@@ -498,7 +498,7 @@ return NULL;
     }
     // f. Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
     received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
-    lseek(fileno(received_data_file_fd), 0, SEEK_SET);
+    llseek(fileno(received_data_file_fd), 0, SEEK_SET);
 
 read: 
     while((number_of_bytes_sent = read(fileno(received_data_file_fd), read_buffer, RECEIVE_PACKET_SIZE)) > 0)

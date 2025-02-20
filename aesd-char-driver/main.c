@@ -310,15 +310,15 @@ long aesd_ioctl(struct file *filp, unsigned int command, unsigned long arg) {
 
 size_t i=0;
 
-                while(i < seekto.write_cmd)
+                while(i < aesd_seekto.write_cmd)
                 {
                     //totalCnt += aesd_device.circBuff.entry[i].size;
 
-                    totalCnt +=aesd_device.entry[i].size;
+                    totalCnt +=aesd_seekto.entry[i].size;
                     i++;
                 }
 
-                totalCnt += seekto.write_cmd_offset;
+                totalCnt += aesd_seekto.write_cmd_offset;
 
                 filp->f_pos = totalCnt;
         }

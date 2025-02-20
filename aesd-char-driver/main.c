@@ -37,7 +37,7 @@ void aesd_cleanup_module(void);
 int aesd_init_module(void);
 int aesd_open(struct inode *inode, struct file *filp);
 
-//loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) ;
+loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) ;
 //long aesd_ioctl(struct file *filp, unsigned int command, unsigned long arg) ;
 //int aesd_release(struct inode *inode, struct file *filp);
 

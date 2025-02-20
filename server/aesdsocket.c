@@ -251,7 +251,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     int number_of_bytes_sent = 0;
     int number_of_bytes_read = 0;
 
-    PDEBUG("\nconnection_handler_thread_fxn: number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0  \n");
+    PDEBUG("\n 111 MJ Testing connection_handler_thread_fxn: number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0  \n");
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
       
@@ -304,7 +304,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
 
 //#endif
 
-      PDEBUG("\nconnection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
+      PDEBUG("\n connection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
       received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
 
       //write(received_data_file_fd, read_buffer, number_of_bytes_read); 

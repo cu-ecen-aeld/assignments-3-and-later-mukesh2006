@@ -314,7 +314,7 @@ size_t i=0;
                 {
                     //totalCnt += aesd_device.circBuff.entry[i].size;
 
-                    totalCnt +=aesd_device.entry[i].size;
+                    totalCnt +=aesd_device.buffer.entry[i].size;
                     i++;
                 }
 

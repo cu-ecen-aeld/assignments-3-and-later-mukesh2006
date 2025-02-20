@@ -255,7 +255,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
       
-#if (USE_AESD_CHAR_DEVICE == 1)
+//#if (USE_AESD_CHAR_DEVICE == 1)
 
     
     // Check if the received data matches the AESD IOCTL command
@@ -302,7 +302,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
       printf("\n\n\n 22222222222222222 it is not AESDCHAR_IOCSEEKTO\n\n\n");
     }
 
-#endif
+//#endif
 
       PDEBUG("\nconnection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
       received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 

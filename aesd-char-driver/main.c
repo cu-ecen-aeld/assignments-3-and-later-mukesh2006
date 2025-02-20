@@ -47,17 +47,17 @@ struct aesd_dev aesd_device;
 
 int aesd_open(struct inode *inode, struct file *filp)
 {
-    PDEBUG("\naesd_open: open");
+    //PDEBUG("\naesd_open: open");
     struct aesd_dev *tmp_dev;
     tmp_dev = container_of(inode->i_cdev, struct aesd_dev, cdev);
-    PDEBUG("\naesd_open: entry buffer pointer val: %p",tmp_dev->entry);
+    //PDEBUG("\naesd_open: entry buffer pointer val: %p",tmp_dev->entry);
     filp->private_data = tmp_dev;
     return 0;
 }
 
 int aesd_release(struct inode *inode, struct file *filp)
 {
-    PDEBUG("\naesd_release: release");    
+  //  PDEBUG("\naesd_release: release");    
     filp->private_data = NULL;
     return 0;
 }
@@ -180,30 +180,30 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     }
 
 
-    PDEBUG("\naesd_write: Locking mutex");
+    //PDEBUG("\naesd_write: Locking mutex");
     if (mutex_lock_interruptible(&dev->mutex)) 
     {
         kfree(data_ptr);
         PDEBUG("\naesd_write: Failed to lock mutex");
         return -ERESTARTSYS;
     }
-    PDEBUG("\naesd_write: Mutex locked");
+    //PDEBUG("\naesd_write: Mutex locked");
 
     prev_length = dev->entry.size;
     dev->entry.size += pos;
 
     // Reallocate buffer
-    PDEBUG("Reallocation start");
+    //PDEBUG("Reallocation start");
     char *new_data_ptr = krealloc(dev->entry.buffptr, dev->entry.size, GFP_KERNEL);
     if (new_data_ptr == NULL) 
     {
-        PDEBUG("Memory reallocation Failed\n");
+        //PDEBUG("Memory reallocation Failed\n");
         kfree(data_ptr);
         mutex_unlock(&dev->mutex);
-        PDEBUG("Mutex unlocked due to reallocation failure");
+        //PDEBUG("Mutex unlocked due to reallocation failure");
         return -ENOMEM;
     }
-    PDEBUG("Reallocation complete");
+    //PDEBUG("Reallocation complete");
 
     dev->entry.buffptr = new_data_ptr; // Update buffptr to point to the new memory location
 
@@ -224,9 +224,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     }
 
     // Unlock mutex and clean up
-    PDEBUG("Unlocking mutex");
+   // PDEBUG("Unlocking mutex");
     mutex_unlock(&dev->mutex);
-    PDEBUG("Mutex unlocked");
+   // PDEBUG("Mutex unlocked");
     kfree(data_ptr);
     return pos;
 }

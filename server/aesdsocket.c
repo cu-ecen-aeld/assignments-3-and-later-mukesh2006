@@ -236,7 +236,197 @@ void signal_handler(int signal_number)
 
 void* connection_handler_thread_fxn(void* thread_parameter)
 {
+
+
+  //connectionHandler_t *thread_func_args = (connectionHandler_t *)thread_parameter;
+    struct connectionHandler_t *data = (struct connectionHandler_t *)thread_parameter;
+    int FILE_SIZE=1024;
+    syslog(LOG_DEBUG, "Receive Started\n");
+    bool rec_complete = false;
+    int offset = 0;
+    char *data_ptr = (char *)malloc(sizeof(char) * FILE_SIZE);
+    #if USE_AESD_CHAR_DEVICE
+    int cmd_length = strlen(aesd_ioctl_cmd);
+    #endif
+
+	int bytes_send;
+	bool send_complete = false;
+
+	char data_buf[FILE_SIZE];
+
+
+ int fd;
+ char *filename=RECEIVE_DATA_FILE;
+ fd = open(filename, O_CREAT | O_APPEND | O_RDWR, S_IRWXU | S_IRGRP | S_IROTH);
+if (fd == -1)
+{
+    syslog(LOG_PERROR, "Error opening or creating the file %s with error code %d\n", filename, errno);
+    close(data->client_fd);
+    data->is_thread_complete = true;
+    free(data_ptr);
+    return NULL;
+}
+syslog(LOG_DEBUG, "File opened successfully\n");
+
+while (!rec_complete)
+{
+    ssize_t bytes_rec = recv(data->client_fd, data_ptr + offset, sizeof(char) * (FILE_SIZE - offset), 0);
+    if (bytes_rec <= 0)
+    {
+        break;
+    }
+    
+#if (USE_AESD_CHAR_DEVICE == 1)
+    // Check if the received data matches the AESD IOCTL command
+    if (strncmp(data_ptr, aesd_ioctl_cmd, cmd_length) == 0)
+    {
+        struct aesd_seekto aesd_seekto_data;
+
+        // Parse the received command to extract seek parameters
+        int command_count = sscanf(data_ptr, "AESDCHAR_IOCSEEKTO:%d,%d", &aesd_seekto_data.write_cmd,
+                                    &aesd_seekto_data.write_cmd_offset);
+
+        if (command_count != 2)
+        {
+            syslog(LOG_ERR, "Failed to parse IOCTL command: %s", strerror(errno));
+        }
+        else
+        {
+            // Executing the IOCTL command to seek to the specified position
+            if (ioctl(fd, AESDCHAR_IOCSEEKTO, &aesd_seekto_data) != 0)
+            {
+         
+                syslog(LOG_ERR, "Failed to execute IOCTL command: %s", strerror(errno));
+            }
+        }
+
+        // After handling the IOCTL command, proceeding to read data
+        goto read;
+    }
+
+#endif
+
+
+
+    offset += bytes_rec;
+    syslog(LOG_DEBUG, "Received %zd bytes of data\n", bytes_rec);
+
+    if (offset >= FILE_SIZE)
+    {
+        char *new_data_ptr = (char *)realloc(data_ptr, sizeof(char) * (offset + FILE_SIZE));
+        if (new_data_ptr != NULL)
+        { // realloc success
+            data_ptr = new_data_ptr;
+        }
+        else
+        { // realloc failed
+            syslog(LOG_PERROR, "realloc failed with error code %d\n", errno);
+            close(data->client_fd);
+            data->is_thread_complete = true;
+            free(data_ptr);
+            close(fd);
+            return NULL;
+        }
+    }
+    
+    if (memchr(data_ptr, '\n', offset) != NULL)
+    {
+        rec_complete = true;
+        syslog(LOG_DEBUG, "Received complete message\n");
+    }
+}
+
+// Lock the mutex before writing to the file if receive is complete
+if (rec_complete)
+{
+    if (pthread_mutex_lock(&write_sync_mutex) != 0)
+    {
+        syslog(LOG_PERROR, "Mutex Lock Failed with error code %d\n", errno);
+        close(data->client_fd);
+        data->is_thread_complete = true;
+        close(fd);
+        free(data_ptr);
+        return NULL;
+    }
+
+    ssize_t result = write(fd, data_ptr, offset);
+    if (result == -1)
+    {
+        syslog(LOG_PERROR, "Unable to write to the file %s with error code %d\n", filename, errno);
+        close(fd);
+        free(data_ptr);
+        close(data->client_fd);
+        data->is_thread_complete = true;
+        pthread_mutex_unlock(&write_sync_mutex);
+        return NULL;
+    }
+
+    pthread_mutex_unlock(&write_sync_mutex);
+    syslog(LOG_DEBUG, "Data written to file successfully\n");
+}
+
+#if (USE_AESD_CHAR_DEVICE == 0)
+	    close(fd);
+            fd = open(filename, O_CREAT | O_RDONLY, S_IRWXU | S_IRGRP | S_IROTH);
+            if (fd == -1)
+            {
+                syslog(LOG_PERROR, "Error opening or creating the file %s with error code %d\n", filename, errno);
+   	 	close(data->client_fd);
+    		data->is_thread_complete = true;
+    		free(data_ptr);
+    		return NULL;
+    	    }
+#endif
+
+	syslog(LOG_DEBUG, "Sending Started\n");
+  
+	
+read:
+
+	while (!send_complete)
+	{
+    bytes_send = read(fd, data_buf, FILE_SIZE);
+    if (bytes_send < 0)
+    {
+        syslog(LOG_PERROR, "Error reading data from the file for sending\n");
+        close(data->client_fd);
+        data->is_thread_complete = true;
+        close(fd);
+        free(data_ptr);
+        break;
+    }
+    else if (bytes_send == 0)
+    {
+        send_complete = true;
+        break;
+    }
+
+    int sent_actual = send(data->client_fd, data_buf, bytes_send, 0);
+    if (sent_actual != bytes_send)
+    {
+        syslog(LOG_PERROR, "Error sending data to socket\n");
+        close(data->client_fd);
+        data->is_thread_complete = true;
+        close(fd);
+        free(data_ptr);
+        break;
+    }
+    syslog(LOG_DEBUG, "Sent %d bytes of data\n", sent_actual);
+}
+
+close(fd);
+close(data->client_fd);
+free(data_ptr);
+syslog(LOG_DEBUG, "File closed and memory freed\n");
+
+return NULL;
+
+
+
+
+/*
   connectionHandler_t *thread_func_args = (connectionHandler_t *)thread_parameter;
+
 
   #if USE_AESD_CHAR_DEVICE
     int cmd_length = strlen(aesd_ioctl_cmd);
@@ -320,6 +510,9 @@ read:
   }
   fclose(received_data_file_fd);
   return thread_parameter;
+
+  */
+
 }
 
 void print_time_thread_fxn(union sigval sv) 

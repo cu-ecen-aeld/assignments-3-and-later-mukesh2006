@@ -268,7 +268,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
 
         if (command_count != 2)
         {
-            syslog(LOG_ERR, "Failed to parse IOCTL command: %s", strerror(errno));
+            syslog(LOG_ERR, "connection_handler_thread_fxn: Failed to parse IOCTL command: %s", strerror(errno));
         }
         else
         {
@@ -277,13 +277,13 @@ void* connection_handler_thread_fxn(void* thread_parameter)
             if (ioctl(fileno(received_data_file_fd), AESDCHAR_IOCSEEKTO, &aesd_seekto_data) != 0)
             {
          
-                syslog(LOG_ERR, "Failed to execute IOCTL command: %s", strerror(errno));
+                syslog(LOG_ERR, "connection_handler_thread_fxn: Failed to execute IOCTL command: %s", strerror(errno));
             }
             else
             {
-              printf(" fialed ioctl ");
+              printf(" connection_handler_thread_fxn fialed ioctl ");
             }
-            fclose(received_data_file_fd);
+            //fclose(received_data_file_fd);
         }
 
         // After handling the IOCTL command, proceeding to read data
@@ -297,7 +297,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
 
       //write(received_data_file_fd, read_buffer, number_of_bytes_read); 
       fwrite(read_buffer, sizeof(char), number_of_bytes_read, received_data_file_fd);
-      fclose(received_data_file_fd);
+      fclose(received_data_file_fd); // MJ closing will reset the seek 
       // Your implementation should use a newline to separate data packets received.  
       // In other words a packet is considered complete when a newline character is found in the input receive stream, 
       // and each newline should result in an append to the /var/tmp/aesdsocketdata file.

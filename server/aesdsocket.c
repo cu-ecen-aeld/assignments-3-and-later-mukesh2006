@@ -251,7 +251,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     int number_of_bytes_sent = 0;
     int number_of_bytes_read = 0;
 
-    PDEBUG("\n 111 MJ Testing connection_handler_thread_fxn: number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0  \n");
+    printf("\n 111 MJ Testing connection_handler_thread_fxn: number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0  \n");
     while((number_of_bytes_read = recv(thread_func_args->client_fd, read_buffer, RECEIVE_PACKET_SIZE, 0)) > 0)
     { 
       
@@ -266,7 +266,7 @@ void* connection_handler_thread_fxn(void* thread_parameter)
         // Parse the received command to extract seek parameters
         int command_count = sscanf(read_buffer, "AESDCHAR_IOCSEEKTO:%d,%d", &aesd_seekto_data.write_cmd,
                                     &aesd_seekto_data.write_cmd_offset);
-        PDEBUG("\n connection_handler_thread_fxn AESDCHAR_IOCSEEKTO: aesd_seekto_data.write_cmd : %d  aesd_seekto_data.write_cmd_offset: %d command_count: %d \n", aesd_seekto_data.write_cmd, aesd_seekto_data.write_cmd_offset, command_count);
+        printf("\n connection_handler_thread_fxn AESDCHAR_IOCSEEKTO: aesd_seekto_data.write_cmd : %d  aesd_seekto_data.write_cmd_offset: %d command_count: %d \n", aesd_seekto_data.write_cmd, aesd_seekto_data.write_cmd_offset, command_count);
 
         syslog(LOG_INFO,"\n connection_handler_thread_fxn AESDCHAR_IOCSEEKTO: aesd_seekto_data.write_cmd : %d  aesd_seekto_data.write_cmd_offset: %d command_count: %d \n", aesd_seekto_data.write_cmd, aesd_seekto_data.write_cmd_offset, command_count);
 
@@ -296,15 +296,13 @@ void* connection_handler_thread_fxn(void* thread_parameter)
     else
     {
 
-      PDEBUG(" strncmp(read_buffer: %s , aesd_ioctl_cmd: %s, cmd_length :%d ) : %d " , read_buffer, aesd_ioctl_cmd, cmd_length, strncmp(read_buffer, aesd_ioctl_cmd, cmd_length)); 
-      PDEBUG("\n\n\n 22222222222222222 it is not AESDCHAR_IOCSEEKTO\n\n\n");
       printf("strncmp(read_buffer: %s , aesd_ioctl_cmd: %s, cmd_length :%d ) : %d " , read_buffer, aesd_ioctl_cmd, cmd_length, strncmp(read_buffer, aesd_ioctl_cmd, cmd_length));
       printf("\n\n\n 22222222222222222 it is not AESDCHAR_IOCSEEKTO\n\n\n");
     }
 
 //#endif
 
-      PDEBUG("\n connection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
+      printf("\n connection_handler_thread_fxn: received_data_file_fd = fopen(RECEIVE_DATA_FILE)  \n");
       received_data_file_fd = fopen(RECEIVE_DATA_FILE, "w+"); 
 
       //write(received_data_file_fd, read_buffer, number_of_bytes_read); 
